@@ -1,15 +1,16 @@
-from flask import Flask
 import os
-import pyodbc, struct
+import pyodbc
+import struct
 from azure import identity
 
 from typing import Union
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-class Person(BaseModel):
-    first_name: str
-    last_name: Union[str, None] = None
+class AutoPay(BaseModel):
+    auto_pay_name: str
+    auto_pay_amount: int
+    auto_pay_draft_date: str
     
 connection_string = os.environ["AZURE_SQL_CONNECTIONSTRING"]
 
@@ -17,52 +18,51 @@ app = FastAPI()
 
 @app.get("/")
 def root():
-    print("Root of Person API")
+    print("Root of AutoPay API")
     try:
         conn = get_conn()
         cursor = conn.cursor()
 
-        # Table should be created ahead of time in production app.
         cursor.execute("""
-            CREATE TABLE Persons (
+            CREATE TABLE AutoPay (
                 ID int NOT NULL PRIMARY KEY IDENTITY,
-                FirstName varchar(255),
-                LastName varchar(255)
+                AutoPayName varchar(255),
+                AutoPayAmount money,
+                AutoPayDraftDate date
             );
         """)
 
         conn.commit()
     except Exception as e:
-        # Table may already exist
         print(e)
-    return "Person API"
+    return "AutoPay API"
 
 @app.get("/all")
-def get_persons():
+def get_autopays():
     rows = []
     with get_conn() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM Persons")
+        cursor.execute("SELECT * FROM AutoPay")
 
         for row in cursor.fetchall():
-            print(row.FirstName, row.LastName)
-            rows.append(f"{row.ID}, {row.FirstName}, {row.LastName}")
+            print(row.AutoPayName, row.AutoPayAmount, row.AutoPayDraftDate)
+            rows.append(f"{row.ID}, { row.AutoPayName }, { row.AutoPayAmount }, { row.AutoPayDraftDate }")
     return rows
 
-@app.get("/person/{person_id}")
-def get_person(person_id: int):
+@app.get("/autopay/{auto_pay_id}")
+def get_autopay(auto_pay_id: int):
     with get_conn() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM Persons WHERE ID = ?", person_id)
+        cursor.execute("SELECT * FROM AutoPay WHERE ID = ?", auto_pay_id)
 
         row = cursor.fetchone()
-        return f"{row.ID}, {row.FirstName}, {row.LastName}"
+        return f"{row.ID}, { row.AutoPayName }, { row.AutoPayAmount }, { row.AutoPayDraftDate }"
 
-@app.post("/person")
-def create_person(item: Person):
+@app.post("/autopay")
+def create_autopay(item: AutoPay):
     with get_conn() as conn:
         cursor = conn.cursor()
-        cursor.execute(f"INSERT INTO Persons (FirstName, LastName) VALUES (?, ?)", item.first_name, item.last_name)
+        cursor.execute(f"INSERT INTO AutoPay (AutoPayName, AutoPayAmount, AutoPayDraftDate) VALUES (?, ?)", item.auto_pay_name, item.auto_pay_amount, item.auto_pay_draft_date)
         conn.commit()
 
     return item
