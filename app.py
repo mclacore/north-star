@@ -7,6 +7,10 @@ from typing import Union
 from fastapi import FastAPI
 from pydantic import BaseModel
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 class AutoPay(BaseModel):
     auto_pay_name: str
     auto_pay_amount: int
