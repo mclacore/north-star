@@ -8,18 +8,19 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 
 from dotenv import load_dotenv
-
 load_dotenv()
+
 
 class AutoPay(BaseModel):
     auto_pay_name: str
     auto_pay_amount: int
     auto_pay_draft_date: str
+
     
 connection_string = os.environ["AZURE_SQL_CONNECTIONSTRING"]
 
-app = FastAPI()
 
+app = FastAPI()
 @app.get("/")
 def root():
     print("Root of AutoPay API")
@@ -41,6 +42,7 @@ def root():
         print(e)
     return "AutoPay API"
 
+
 @app.get("/all")
 def get_autopays():
     rows = []
@@ -53,6 +55,7 @@ def get_autopays():
             rows.append(f"{row.ID}, { row.AutoPayName }, { row.AutoPayAmount }, { row.AutoPayDraftDate }")
     return rows
 
+
 @app.get("/autopay/{auto_pay_id}")
 def get_autopay(auto_pay_id: int):
     with get_conn() as conn:
@@ -62,14 +65,20 @@ def get_autopay(auto_pay_id: int):
         row = cursor.fetchone()
         return f"{row.ID}, { row.AutoPayName }, { row.AutoPayAmount }, { row.AutoPayDraftDate }"
 
+
 @app.post("/autopay")
 def create_autopay(item: AutoPay):
     with get_conn() as conn:
         cursor = conn.cursor()
-        cursor.execute(f"INSERT INTO AutoPay (AutoPayName, AutoPayAmount, AutoPayDraftDate) VALUES (?, ?)", item.auto_pay_name, item.auto_pay_amount, item.auto_pay_draft_date)
+        cursor.execute(f"""INSERT INTO AutoPay (
+            AutoPayName,
+            AutoPayAmount,
+            AutoPayDraftDate) VALUES (?, ?)
+            """, item.auto_pay_name, item.auto_pay_amount, item.auto_pay_draft_date)
         conn.commit()
 
     return item
+
 
 def get_conn():
     credential = identity.DefaultAzureCredential(exclude_interactive_browser_credential=False)
